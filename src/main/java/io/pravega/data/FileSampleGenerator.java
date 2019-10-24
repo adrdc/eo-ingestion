@@ -38,12 +38,14 @@ public class FileSampleGenerator {
             for (int i = 0; i < numOfFiles; i++) {
                 DatumWriter<Sample> sampleDatumWriter = new SpecificDatumWriter<>(Sample.class);
                 DataFileWriter<Sample> dataFileWriter = new DataFileWriter<>(sampleDatumWriter);
-                StringBuilder sb = new StringBuilder(i);
+                StringBuilder sb = new StringBuilder(Integer.toString(i));
                 sb.append(".avro");
 
                 try{
-                    dataFileWriter.create(Sample.getClassSchema(), new File(path.toFile(), sb.toString()));
+                    File f = new File(path.toFile(), sb.toString());
+                    dataFileWriter.create(Sample.getClassSchema(), f);
 
+                    log.info("File {}", f.toString());
                     int j = 0;
                     while (j++ < numOfRecords) {
                         dataFileWriter.append(generator.getNext());

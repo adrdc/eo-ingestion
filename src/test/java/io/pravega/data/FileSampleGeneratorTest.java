@@ -9,6 +9,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +18,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 public class FileSampleGeneratorTest {
+    static final Logger log = LoggerFactory.getLogger(FileSampleGeneratorTest.class);
     Path path;
     FileGenerator fileGen;
     int numOfFiles;
@@ -27,7 +30,6 @@ public class FileSampleGeneratorTest {
         this.numOfFiles = 10;
         this.numOfRecords = 1000;
         this.fileGen = new FileGenerator(this.path,
-                                        "eo-ingestion",
                                          this.numOfFiles,
                                          this.numOfRecords);
     }
@@ -41,6 +43,7 @@ public class FileSampleGeneratorTest {
     public void testFileSampleGenerator() {
         // Order and read files
         this.fileGen.generate();
+        log.info("Path {}", path.toString());
         Assertions.assertEquals(path.toFile().listFiles().length, this.numOfFiles);
         Arrays.stream(path.toFile().listFiles()).forEach(
                 f -> {

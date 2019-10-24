@@ -4,10 +4,12 @@ import io.pravega.avro.Sample;
 import io.pravega.client.ClientConfig;
 import io.pravega.client.EventStreamClientFactory;
 import io.pravega.client.admin.StreamManager;
-import io.pravega.client.stream.EventStreamWriter;
 import io.pravega.client.stream.EventWriterConfig;
 import io.pravega.client.stream.ScalingPolicy;
 import io.pravega.client.stream.StreamConfiguration;
+import io.pravega.client.stream.Transaction;
+import io.pravega.client.stream.TransactionalEventStreamWriter;
+import io.pravega.client.stream.TxnFailedException;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -25,14 +27,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-public class PravegaWriter {
+public class PravegaTxnWriter {
     static final Logger log = LoggerFactory.getLogger(PravegaWriter.class);
     private Path path;
     private final String scope;
     private final String stream;
     private final URI controller;
 
-    public PravegaWriter(Path path, URI controller) {
+    public PravegaTxnWriter(Path path, URI controller) {
         this.path = path;
         this.scope = "test-scope";
         this.stream = "test-stream";
@@ -54,36 +56,46 @@ public class PravegaWriter {
                 .build();
 
         try (EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(scope, clientConfig);
-             EventStreamWriter<Sample> writer = clientFactory.
-             createEventWriter(stream,
-                     new AvroSampleSerializer(),
-                     EventWriterConfig.builder().build())) {
+             TransactionalEventStreamWriter<Sample> writer = clientFactory.
+                     createTransactionalEventWriter(stream,
+                             new AvroSampleSerializer(),
+                             EventWriterConfig.builder().build())) {
 
             Arrays.stream(path.toFile().listFiles()).sorted( (f1, f2) -> {
-                    try {
-                        int i1 = Integer.parseInt(f1.getName().split(".avro")[0]);
-                        int i2 = Integer.parseInt(f2.getName().split(".avro")[0]);
-                        return i1 - i2;
-                    } catch(NumberFormatException e) {
-                        throw new AssertionError(e);
-                    }
+                try {
+                    int i1 = Integer.parseInt(f1.getName().split(".avro")[0]);
+                    int i2 = Integer.parseInt(f2.getName().split(".avro")[0]);
+                    return i1 - i2;
+                } catch(NumberFormatException e) {
+                    throw new AssertionError(e);
+                }
             }).forEach(
                     f -> {
-
                         try {
-                            DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
-                            DataFileReader<Sample> dataFileReader = new DataFileReader<>(f, userDatumReader);
-                            dataFileReader.forEach( sample -> writer.writeEvent(sample.getId().toString(), sample));
+                            Transaction<Sample> txn = writer.beginTxn();
+                            // Add txn id and file name to state synchronizer
+                            try {
 
-                        } catch (IOException e) {
+                                DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
+                                DataFileReader<Sample> dataFileReader = new DataFileReader<>(f, userDatumReader);
+                                dataFileReader.forEach(sample -> {
+                                    try {
+                                        txn.writeEvent(sample.getId().toString(), sample);
+                                    } catch (TxnFailedException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                });
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            txn.commit();
+                        } catch (TxnFailedException e) {
                             throw new RuntimeException(e);
                         }
                     }
             );
         }
     }
-
-
 
     public static void main (String[] args) {
         URI controller = URI.create("");
