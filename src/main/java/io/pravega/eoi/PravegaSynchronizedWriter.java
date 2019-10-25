@@ -3,21 +3,13 @@ package io.pravega.eoi;
 import io.pravega.avro.Sample;
 import io.pravega.client.ClientConfig;
 import io.pravega.client.EventStreamClientFactory;
+import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.admin.StreamManager;
-import io.pravega.client.stream.EventWriterConfig;
-import io.pravega.client.stream.ScalingPolicy;
-import io.pravega.client.stream.StreamConfiguration;
-import io.pravega.client.stream.Transaction;
-import io.pravega.client.stream.TransactionalEventStreamWriter;
-import io.pravega.client.stream.TxnFailedException;
+import io.pravega.client.stream.*;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,20 +19,45 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-public class PravegaTxnWriter {
-    static final Logger log = LoggerFactory.getLogger(PravegaTxnWriter.class);
+public class PravegaSynchronizedWriter {
+    static final Logger log = LoggerFactory.getLogger(PravegaSynchronizedWriter.class);
     private Path path;
     private final String scope;
-    private final String stream;
+    private final String datastream;
+    private final String syncstream;
     private final URI controller;
+    private ExactlyOnceIngestionSynchronizer synchronizer;
 
-    public PravegaTxnWriter(Path path, URI controller) {
+    public PravegaSynchronizedWriter(Path path, URI controller) {
         this.path = path;
         this.scope = "test-scope";
-        this.stream = "test-stream";
+        this.datastream = "test-stream";
+        this.syncstream = "sync-stream";
         this.controller = controller;
     }
 
+    private boolean isInitialized() {
+        return false;
+    }
+
+    public void init() {
+        if (!isInitialized()) {
+            StreamManager streamManager = StreamManager.create(controller);
+            streamManager.createScope(scope);
+
+            StreamConfiguration streamConfig = StreamConfiguration.builder()
+                    .scalingPolicy(ScalingPolicy.fixed(10))
+                    .build();
+            streamManager.createStream(scope, syncstream, streamConfig);
+
+            ClientConfig clientConfig = ClientConfig.builder()
+                    .controllerURI(controller)
+                    .build();
+            SynchronizerClientFactory factory = SynchronizerClientFactory.withScope(scope, clientConfig);
+            this.synchronizer = ExactlyOnceIngestionSynchronizer
+                    .createNewSynchronizer(Stream.of(scope, syncstream).getScopedName(), factory);
+        }
+    }
     public void run() {
 
         StreamManager streamManager = StreamManager.create(controller);
@@ -49,7 +66,7 @@ public class PravegaTxnWriter {
         StreamConfiguration streamConfig = StreamConfiguration.builder()
                 .scalingPolicy(ScalingPolicy.fixed(10))
                 .build();
-        streamManager.createStream(scope, stream, streamConfig);
+        streamManager.createStream(scope, datastream, streamConfig);
 
         ClientConfig clientConfig = ClientConfig.builder()
                 .controllerURI(controller)
@@ -57,7 +74,7 @@ public class PravegaTxnWriter {
 
         try (EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(scope, clientConfig);
              TransactionalEventStreamWriter<Sample> writer = clientFactory.
-                     createTransactionalEventWriter(stream,
+                     createTransactionalEventWriter(datastream,
                              new AvroSampleSerializer(),
                              EventWriterConfig.builder().build())) {
 
