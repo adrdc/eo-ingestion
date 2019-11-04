@@ -80,6 +80,23 @@
       <version>5.3.1</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>io.pravega</groupId>
+      <artifactId>pravega-standalone</artifactId>
+      <version>0.5.1</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
   </dependencies>
 
 </project>

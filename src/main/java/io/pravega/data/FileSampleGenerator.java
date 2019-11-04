@@ -21,18 +21,8 @@ public class FileSampleGenerator {
     static final Logger log = LoggerFactory.getLogger(FileSampleGenerator.class);
 
 
-    static class FileGenerator {
-        private Path path;
-        private int numOfFiles;
-        private int numOfRecords;
-
-        FileGenerator(Path path, int numOfFiles, int numOfRecords) {
-            this.path = path;
-            this.numOfFiles = numOfFiles;
-            this.numOfRecords = numOfRecords;
-        }
-
-        void generate() {
+    public static class FileGenerator {
+        public static void generate(Path path, int numOfFiles, int numOfRecords) {
             RandomSampleGenerator generator = new RandomSampleGenerator();
 
             for (int i = 0; i < numOfFiles; i++) {
@@ -132,8 +122,7 @@ public class FileSampleGenerator {
             numOfRecords = Integer.parseInt("r");
         }
 
-        FileGenerator fileGenerator = new FileGenerator(dir, numOfFiles, numOfRecords);
-        fileGenerator.generate();
+        FileGenerator.generate(dir, numOfFiles, numOfRecords);
 
     }
 }

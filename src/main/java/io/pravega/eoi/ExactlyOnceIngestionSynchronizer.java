@@ -41,7 +41,7 @@ public class ExactlyOnceIngestionSynchronizer {
 
     @ToString
     @RequiredArgsConstructor
-    private static class StatusUpdate<T> implements Update<UpdatableStatus>, Serializable {
+    private static class StatusUpdate implements Update<UpdatableStatus>, Serializable {
         private final Status status;
 
         @Override

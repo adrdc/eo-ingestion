@@ -20,7 +20,6 @@ import java.util.Arrays;
 public class FileSampleGeneratorTest {
     static final Logger log = LoggerFactory.getLogger(FileSampleGeneratorTest.class);
     Path path;
-    FileGenerator fileGen;
     int numOfFiles;
     int numOfRecords;
 
@@ -29,9 +28,6 @@ public class FileSampleGeneratorTest {
         this.path = Files.createTempDirectory("eo-ingestion-");
         this.numOfFiles = 10;
         this.numOfRecords = 1000;
-        this.fileGen = new FileGenerator(this.path,
-                                         this.numOfFiles,
-                                         this.numOfRecords);
     }
 
     @AfterEach
@@ -42,7 +38,9 @@ public class FileSampleGeneratorTest {
     @Test
     public void testFileSampleGenerator() {
         // Order and read files
-        this.fileGen.generate();
+        FileGenerator.generate(this.path,
+                                this.numOfFiles,
+                                this.numOfRecords);
         log.info("Path {}", path.toString());
         Assertions.assertEquals(path.toFile().listFiles().length, this.numOfFiles);
         Arrays.stream(path.toFile().listFiles()).forEach(
