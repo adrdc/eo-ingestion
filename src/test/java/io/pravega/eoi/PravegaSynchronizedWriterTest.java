@@ -82,6 +82,29 @@ public class PravegaSynchronizedWriterTest {
                                         10000));
     }
 
+    @Test
+    public void failureAfterCommitWriterTest() throws IOException {
+        String methodName = (new Object() {}).getClass().getEnclosingMethod().getName();
+        log.info("Test case: {}", methodName);
+
+        Path dir = Files.createTempDirectory("eo-ingestion-");
+
+        FileSampleGenerator.FileGenerator.generate(dir, 10, 1000);
+
+        PravegaSynchronizedWriter writerPreFailure = new PravegaSynchronizedWriter(dir, SETUP_UTILS.get().getControllerUri(), methodName);
+        writerPreFailure.init();
+        writerPreFailure.induceFailure(PravegaSynchronizedWriter.FType.AfterCommit);
+        writerPreFailure.run();
+
+        PravegaSynchronizedWriter writerPostFailure = new PravegaSynchronizedWriter(dir, SETUP_UTILS.get().getControllerUri(), methodName);
+        writerPostFailure.init();
+        writerPostFailure.run();
+
+        Assertions.assertTrue(readEvents(writerPostFailure.getController(),
+                Stream.of(writerPostFailure.getScope(), writerPostFailure.getDatastream()),
+                10000));
+    }
+
 
 
     private boolean readEvents(URI controller, Stream stream, int total) {

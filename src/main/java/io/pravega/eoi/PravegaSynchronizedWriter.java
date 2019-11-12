@@ -184,7 +184,6 @@ public class PravegaSynchronizedWriter {
                                 // Add txn id and file name to state synchronizer
                                 this.synchronizer.updateStatus(new Status(fileId, txn.getTxnId()));
 
-
                                 log.info("Added the following status: {}, {}", fileId, txn.getTxnId());
                                 try {
                                     DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
@@ -198,17 +197,7 @@ public class PravegaSynchronizedWriter {
                                     });
 
                                     // Set during tests to break the flow prematurely
-
-                                    if (this.duringTxnFlag.get()) {
-                                        if (txnCount.get() == this.txnToFail.get()) {
-                                            log.info("Breaking the flow for file name {}", f.getName());
-                                            skip.set(true);
-
-                                            return;
-                                        } else {
-                                            txnCount.incrementAndGet();
-                                        }
-                                    }
+                                    if (breakFlow(this.duringTxnFlag, txnCount, skip)) return;
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -216,13 +205,7 @@ public class PravegaSynchronizedWriter {
                                 txn.commit();
 
                                 // Set during tests to break the flow prematurely
-                                if (this.afterCommitFlag.get()) {
-                                    if (txnCount.get() == this.txnToFail.get()) {
-                                        return;
-                                    } else {
-                                        txnCount.incrementAndGet();
-                                    }
-                                }
+                                if (breakFlow(this.afterCommitFlag, txnCount, skip)) return;
                             } catch (TxnFailedException e) {
                                 throw new RuntimeException(e);
                             }
@@ -230,6 +213,22 @@ public class PravegaSynchronizedWriter {
                     }
             );
         }
+    }
+
+    private boolean breakFlow(AtomicBoolean flag, AtomicInteger txnCount, AtomicBoolean skip) {
+        if(flag.get()) {
+            if (txnCount.get() == this.txnToFail.get()) {
+                skip.set(true);
+
+                return true;
+            } else {
+                txnCount.incrementAndGet();
+
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public static void main (String[] args) {
@@ -259,6 +258,7 @@ public class PravegaSynchronizedWriter {
             controller = URI.create(cmd.getOptionValue("c"));
         }
         PravegaSynchronizedWriter writer = new PravegaSynchronizedWriter(path, controller, "test-stream");
+        writer.init();
         writer.run();
     }
 }
