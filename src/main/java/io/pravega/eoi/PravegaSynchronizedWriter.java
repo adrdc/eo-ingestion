@@ -1,6 +1,7 @@
 package io.pravega.eoi;
 
 import io.pravega.avro.Sample;
+import io.pravega.avro.Status;
 import io.pravega.client.ClientConfig;
 import io.pravega.client.EventStreamClientFactory;
 import io.pravega.client.SynchronizerClientFactory;
@@ -10,7 +11,11 @@ import lombok.Getter;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,11 +29,10 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PravegaSynchronizedWriter {
+public class PravegaSynchronizedWriter implements AutoCloseable {
     static final Logger log = LoggerFactory.getLogger(PravegaSynchronizedWriter.class);
     private Path path;
 
-    private StreamManager streamManager;
     @Getter
     private final String scope;
     @Getter
@@ -37,9 +41,11 @@ public class PravegaSynchronizedWriter {
     @Getter
     private final URI controller;
     private int startFileId;
+    private SynchronizerClientFactory syncFactory;
     private ExactlyOnceIngestionSynchronizer synchronizer;
     private AtomicBoolean initialized = new AtomicBoolean(false);
     private AtomicInteger txnToFail = new AtomicInteger(0);
+    private Status currentStatus;
 
     public PravegaSynchronizedWriter(Path path, URI controller, String streamName) {
         this.path = path;
@@ -55,41 +61,42 @@ public class PravegaSynchronizedWriter {
 
     public void init() {
         if (!isInitialized()) {
-            this.streamManager = StreamManager.create(controller);
-            streamManager.createScope(scope);
-
-            // Create sync stream
-            StreamConfiguration syncStreamConfig = StreamConfiguration.builder()
-                    .scalingPolicy(ScalingPolicy.fixed(1))
-                    .build();
-            streamManager.createStream(scope, syncstream, syncStreamConfig);
-
             ClientConfig clientConfig = ClientConfig.builder()
                     .controllerURI(controller)
                     .build();
 
-            // Create state synchronizer
-            SynchronizerClientFactory factory = SynchronizerClientFactory.withScope(scope, clientConfig);
-            this.synchronizer = ExactlyOnceIngestionSynchronizer.createNewSynchronizer(syncstream, factory);
+            try (StreamManager streamManager = StreamManager.create(controller)) {
+                streamManager.createScope(scope);
 
-            // Create data stream
-            StreamConfiguration dataStreamConfig = StreamConfiguration.builder()
-                    .scalingPolicy(ScalingPolicy.fixed(10))
-                    .build();
-            streamManager.createStream(scope, datastream, dataStreamConfig);
+                // Create sync stream
+                StreamConfiguration syncStreamConfig = StreamConfiguration.builder()
+                        .scalingPolicy(ScalingPolicy.fixed(1))
+                        .build();
+                streamManager.createStream(scope, syncstream, syncStreamConfig);
 
-            recover();
+                // Create state synchronizer
+                this.syncFactory = SynchronizerClientFactory.withScope(scope, clientConfig);
+                this.synchronizer = ExactlyOnceIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
+
+                // Create data stream
+                StreamConfiguration dataStreamConfig = StreamConfiguration.builder()
+                        .scalingPolicy(ScalingPolicy.fixed(10))
+                        .build();
+                streamManager.createStream(scope, datastream, dataStreamConfig);
+
+                recover();
+            }
         }
         initialized.set(true);
     }
 
     private void recover() {
         this.synchronizer.update();
-        Status current = this.synchronizer.getStatus();
-        this.startFileId = current.getFileId();
-        log.info("Upon recovery, current status is {}, {}", this.startFileId, current.getTxnId());
-        if( current.getFileId() >= 0) {
-            UUID txnId = current.getTxnId();
+        this.currentStatus = this.synchronizer.getStatus();
+        this.startFileId = this.currentStatus.getFileId();
+        log.info("Upon recovery, current status is {}, {}", this.startFileId, this.currentStatus.getTxnId());
+        if( this.currentStatus.getFileId() >= 0) {
+            UUID txnId = UUID.fromString(this.currentStatus.getTxnId().toString());
 
             ClientConfig clientConfig = ClientConfig.builder()
                     .controllerURI(controller)
@@ -105,14 +112,17 @@ public class PravegaSynchronizedWriter {
                 switch(txn.checkStatus()) {
                     case OPEN:
                         txn.abort();
-                        this.startFileId = current.getFileId();
+                        this.startFileId = this.currentStatus.getFileId();
 
                         break;
                     case ABORTED:
                     case ABORTING:
+                        this.startFileId = this.currentStatus.getFileId();
+
+                        break;
                     case COMMITTED:
                     case COMMITTING:
-                        this.startFileId = current.getFileId() + 1;
+                        this.startFileId = this.currentStatus.getFileId() + 1;
 
                         break;
                 };
@@ -131,6 +141,7 @@ public class PravegaSynchronizedWriter {
      */
     boolean induceFailure(FType type) {
         this.txnToFail.set((new Random()).nextInt(path.toFile().listFiles().length));
+        log.info("Txn to fail: {}", this.txnToFail.get());
         switch (type) {
             case DuringTxn:
                 if (!this.afterCommitFlag.get()) {
@@ -182,7 +193,15 @@ public class PravegaSynchronizedWriter {
                                 log.info("Beginning transaction for file {}", f.getName());
                                 Transaction<Sample> txn = writer.beginTxn();
                                 // Add txn id and file name to state synchronizer
-                                this.synchronizer.updateStatus(new Status(fileId, txn.getTxnId()));
+                                //this.synchronizer.updateStatus(new Status(fileId, txn.getTxnId()));
+                                Status newStatus = Status.newBuilder()
+                                        .setFileId(fileId)
+                                        .setTxnId(txn.getTxnId().toString())
+                                        .build();
+                                if(!this.synchronizer.updateStatus(newStatus, this.currentStatus)) {
+                                    throw new RuntimeException("Concurrent status update. Is there another writer running?");
+                                };
+                                this.currentStatus = newStatus;
 
                                 log.info("Added the following status: {}, {}", fileId, txn.getTxnId());
                                 try {
@@ -209,10 +228,17 @@ public class PravegaSynchronizedWriter {
                             } catch (TxnFailedException e) {
                                 throw new RuntimeException(e);
                             }
+                        } else {
+                            log.info("Skipping file {}, {}", fileId, this.startFileId);
                         }
                     }
             );
         }
+    }
+
+    @Override
+    public void close() {
+        this.syncFactory.close();
     }
 
     private boolean breakFlow(AtomicBoolean flag, AtomicInteger txnCount, AtomicBoolean skip) {
@@ -256,9 +282,15 @@ public class PravegaSynchronizedWriter {
 
         if (cmd.hasOption("c")) {
             controller = URI.create(cmd.getOptionValue("c"));
+            log.info("Controller URI: {}", controller);
+
+            try( PravegaSynchronizedWriter writer =
+                         new PravegaSynchronizedWriter(path, controller, "test-stream")) {
+                writer.init();
+                writer.run();
+            }
+        } else {
+            log.error("No controller URL provided");
         }
-        PravegaSynchronizedWriter writer = new PravegaSynchronizedWriter(path, controller, "test-stream");
-        writer.init();
-        writer.run();
     }
 }

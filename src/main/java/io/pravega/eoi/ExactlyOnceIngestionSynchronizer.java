@@ -1,5 +1,6 @@
 package io.pravega.eoi;
 
+import io.pravega.avro.Status;
 import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.state.*;
 import io.pravega.client.stream.impl.JavaSerializer;
@@ -9,7 +10,9 @@ import lombok.ToString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -41,8 +44,12 @@ public class ExactlyOnceIngestionSynchronizer {
 
     @ToString
     @RequiredArgsConstructor
-    private static class StatusUpdate implements Update<UpdatableStatus>, Serializable {
+    static class StatusUpdate implements Update<UpdatableStatus>, Serializable {
         private final Status status;
+
+        ByteBuffer getStatusBytes() throws IOException {
+            return status.toByteBuffer();
+        }
 
         @Override
         public UpdatableStatus applyTo(UpdatableStatus oldState, Revision newRevision) {
@@ -53,11 +60,19 @@ public class ExactlyOnceIngestionSynchronizer {
     }
 
     @ToString
-    private static class StatusInit implements InitialUpdate<UpdatableStatus>, Serializable {
+    static class StatusInit implements InitialUpdate<UpdatableStatus>, Serializable {
+        private final Status status = Status.newBuilder()
+                                            .setFileId(-1)
+                                            .setTxnId(UUID.randomUUID().toString())
+                                            .build();
+
+        ByteBuffer getStatusBytes() throws IOException {
+            return status.toByteBuffer();
+        }
 
         @Override
         public UpdatableStatus create(String streamName, Revision revision) {
-            return new UpdatableStatus(streamName, revision, new Status(-1, UUID.randomUUID()));
+            return new UpdatableStatus(streamName, revision, status);
         }
     }
 
@@ -75,17 +90,25 @@ public class ExactlyOnceIngestionSynchronizer {
 
     public Status getStatus() { return stateSynchronizer.getState().status; }
 
-    public void updateStatus(Status status) {
-        stateSynchronizer.updateState((current, updates)-> {
-            updates.add(new StatusUpdate(status));
+    public boolean updateStatus(Status newStatus, Status currentStatus) {
+        return stateSynchronizer.updateState((current, updates)-> {
+            if (currentStatus.getFileId() == current.status.getFileId() &&
+                    currentStatus.getTxnId().equals(current.status.getTxnId())) {
+                updates.add(new StatusUpdate(newStatus));
+
+                return true;
+            } else {
+
+                return false;
+            }
         });
     }
 
     public static <T extends Serializable> ExactlyOnceIngestionSynchronizer createNewSynchronizer(String streamName, SynchronizerClientFactory factory) {
         return new ExactlyOnceIngestionSynchronizer(streamName,
                 factory.createStateSynchronizer(streamName,
-                        new JavaSerializer<StatusUpdate>(),
-                        new JavaSerializer<StatusInit>(),
+                        new StatusUpdateSerializer(),
+                        new StatusInitSerializer(),
                         SynchronizerConfig.builder().build()));
     }
 

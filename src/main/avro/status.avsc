@@ -3,6 +3,6 @@
  "name": "Status",
  "fields": [
      {"name": "fileId", "type": "int"},
-     {"name": "txnId", "type": "string", "logicalType": "uuid"}
+     {"name": "txnId", "type": "string"}
  ]
 }

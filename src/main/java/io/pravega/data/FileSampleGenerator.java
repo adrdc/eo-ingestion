@@ -119,7 +119,7 @@ public class FileSampleGenerator {
         }
 
         if (cmd.hasOption("r")) {
-            numOfRecords = Integer.parseInt("r");
+            numOfRecords = Integer.parseInt(cmd.getOptionValue("r"));
         }
 
         FileGenerator.generate(dir, numOfFiles, numOfRecords);

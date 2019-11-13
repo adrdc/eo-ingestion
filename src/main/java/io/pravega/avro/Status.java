@@ -15,7 +15,7 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class Status extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 6721723705923135739L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Status\",\"namespace\":\"io.pravega.avro\",\"fields\":[{\"name\":\"fileId\",\"type\":\"int\"},{\"name\":\"txnId\",\"type\":\"string\",\"logicalType\":\"uuid\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Status\",\"namespace\":\"io.pravega.avro\",\"fields\":[{\"name\":\"fileId\",\"type\":\"int\"},{\"name\":\"txnId\",\"type\":\"string\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();

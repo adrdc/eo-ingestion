@@ -66,7 +66,7 @@ public class PravegaSynchronizedWriterTest {
 
         Path dir = Files.createTempDirectory("eo-ingestion-");
 
-        FileSampleGenerator.FileGenerator.generate(dir, 10, 1000);
+        FileSampleGenerator.FileGenerator.generate(dir, 50, 1000);
 
         PravegaSynchronizedWriter writerPreFailure = new PravegaSynchronizedWriter(dir, SETUP_UTILS.get().getControllerUri(), methodName);
         writerPreFailure.init();
@@ -79,7 +79,7 @@ public class PravegaSynchronizedWriterTest {
 
         Assertions.assertTrue(readEvents(writerPostFailure.getController(),
                                         Stream.of(writerPostFailure.getScope(), writerPostFailure.getDatastream()),
-                                        10000));
+                                        50000));
     }
 
     @Test
