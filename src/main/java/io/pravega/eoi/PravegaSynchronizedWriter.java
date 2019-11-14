@@ -8,6 +8,7 @@ import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.admin.StreamManager;
 import io.pravega.client.stream.*;
 import lombok.Getter;
+import lombok.val;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -109,12 +110,16 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                                  new AvroSampleSerializer(),
                                  EventWriterConfig.builder().build())) {
                 Transaction<Sample> txn = writer.getTxn(txnId);
-                switch(txn.checkStatus()) {
-                    case OPEN:
-                        txn.abort();
-                        this.startFileId = this.currentStatus.getFileId();
+                Transaction.Status status = txn.checkStatus();
 
-                        break;
+                if(status.equals(Transaction.Status.OPEN)) {
+                    txn.abort();
+                    status = txn.checkStatus();
+                }
+
+                switch(status) {
+                    case OPEN:
+                        throw new RuntimeException("Aborting partial transaction has failed");
                     case ABORTED:
                     case ABORTING:
                         this.startFileId = this.currentStatus.getFileId();
