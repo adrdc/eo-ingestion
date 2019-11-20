@@ -43,7 +43,7 @@ public class SimpleReader {
                 .build();
 
         // simply read events
-        DataStream dataStream = env.addSource(source).name("Pravega Stream");
+        DataStream<Sample> dataStream = env.addSource(source).name("Pravega Stream");
 
         // create an output sink to print to stdout for verification
         dataStream.print();

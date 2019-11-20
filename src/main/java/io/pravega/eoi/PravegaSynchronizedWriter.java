@@ -112,14 +112,12 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                 Transaction<Sample> txn = writer.getTxn(txnId);
                 Transaction.Status status = txn.checkStatus();
 
-                if(status.equals(Transaction.Status.OPEN)) {
-                    txn.abort();
-                    status = txn.checkStatus();
-                }
-
                 switch(status) {
                     case OPEN:
-                        throw new RuntimeException("Aborting partial transaction has failed");
+                        txn.abort();
+                        this.startFileId = this.currentStatus.getFileId();
+
+                        break;
                     case ABORTED:
                     case ABORTING:
                         this.startFileId = this.currentStatus.getFileId();
@@ -265,11 +263,13 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
     public static void main (String[] args) {
         URI controller = URI.create("");
         Path path = Paths.get("");
+        String streamName = "test-stream";
 
         Options options = new Options();
 
         options.addOption("p", true, "Path to data files");
         options.addOption("c", true, "Controller URI");
+        options.addOption("s", true, "Stream name" );
 
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd;
@@ -285,12 +285,16 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
             path = Paths.get(cmd.getOptionValue("p"));
         }
 
+        if (cmd.hasOption("s")) {
+            streamName = cmd.getOptionValue("s");
+        }
+
         if (cmd.hasOption("c")) {
             controller = URI.create(cmd.getOptionValue("c"));
             log.info("Controller URI: {}", controller);
 
             try( PravegaSynchronizedWriter writer =
-                         new PravegaSynchronizedWriter(path, controller, "test-stream")) {
+                         new PravegaSynchronizedWriter(path, controller, streamName)) {
                 writer.init();
                 writer.run();
             }

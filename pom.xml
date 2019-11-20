@@ -47,7 +47,7 @@
     <dependency>
       <groupId>io.pravega</groupId>
       <artifactId>pravega-client</artifactId>
-      <version>0.5.1</version>
+      <version>0.6.0</version>
     </dependency>
 
     <dependency>
@@ -58,22 +58,22 @@
 
     <dependency>
       <groupId>org.apache.flink</groupId>
-      <artifactId>flink-java</artifactId>
-      <version>1.7.2</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.flink</groupId>
       <artifactId>flink-streaming-java_2.12</artifactId>
-      <version>1.7.2</version>
+      <version>1.9.1</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.rocksdb</groupId>
+          <artifactId>rocksdbjni</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
 
     <dependency>
       <groupId>io.pravega</groupId>
-      <artifactId>pravega-connectors-flink_2.12</artifactId>
-      <version>0.5.1</version>
+      <artifactId>pravega-connectors-flink-1.9_2.12</artifactId>
+      <version>0.6.0</version>
     </dependency>
 
     <dependency>
@@ -104,7 +104,7 @@
     <dependency>
       <groupId>io.pravega</groupId>
       <artifactId>pravega-standalone</artifactId>
-      <version>0.5.1</version>
+      <version>0.6.0</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -123,6 +123,12 @@
       <artifactId>lombok</artifactId>
       <version>1.18.4</version>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.rocksdb</groupId>
+      <artifactId>rocksdbjni</artifactId>
+      <version>5.9.2</version>
     </dependency>
   </dependencies>
 

@@ -3,7 +3,6 @@ package io.pravega.eoi;
 import io.pravega.avro.Status;
 import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.state.*;
-import io.pravega.client.stream.impl.JavaSerializer;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
