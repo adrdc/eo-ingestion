@@ -97,6 +97,7 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
         this.startFileId = this.currentStatus.getFileId();
         log.info("Upon recovery, current status is {}, {}", this.startFileId, this.currentStatus.getTxnId());
         if( this.currentStatus.getFileId() >= 0) {
+            System.out.println("Running recovery, last file is " + this.currentStatus.getFileId());
             UUID txnId = UUID.fromString(this.currentStatus.getTxnId().toString());
 
             ClientConfig clientConfig = ClientConfig.builder()
@@ -193,6 +194,8 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                         int fileId = Integer.parseInt(f.getName().split(".avro")[0]);
                         if( fileId >= this.startFileId && !skip.get()) {
                             try {
+                                System.out.println("File " + f.getName());
+                                System.out.println("\t Beginning transaction.");
                                 log.info("Beginning transaction for file {}", f.getName());
                                 Transaction<Sample> txn = writer.beginTxn();
                                 // Add txn id and file name to state synchronizer
@@ -223,6 +226,7 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
+                                System.out.println("\t Committing transaction.");
                                 log.info("Committing transaction for file {}", f.getName());
                                 txn.commit();
 
