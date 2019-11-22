@@ -105,8 +105,6 @@ public class PravegaSynchronizedWriterTest {
                 10000));
     }
 
-
-
     private boolean readEvents(URI controller, Stream stream, int total) {
         // Start reader group
         ClientConfig clientConfig = ClientConfig.builder()
