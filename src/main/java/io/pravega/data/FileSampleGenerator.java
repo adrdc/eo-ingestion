@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,7 +36,6 @@ import java.util.Random;
 
 public class FileSampleGenerator {
     static final Logger log = LoggerFactory.getLogger(FileSampleGenerator.class);
-
 
     public static class FileGenerator {
         public static void generate(Path path, int numOfFiles, int numOfRecords) {
@@ -48,13 +48,16 @@ public class FileSampleGenerator {
                 sb.append(".avro");
 
                 try{
+                    long initialTime = 0;
                     File f = new File(path.toFile(), sb.toString());
                     dataFileWriter.create(Sample.getClassSchema(), f);
 
                     log.info("File {}", f.toString());
                     int j = 0;
                     while (j++ < numOfRecords) {
-                        dataFileWriter.append(generator.getNext());
+                        Sample next = generator.getNext((long) i);
+                        dataFileWriter.append(next);
+                        log.debug(next.toString());
                     }
 
                     dataFileWriter.close();
@@ -71,10 +74,13 @@ public class FileSampleGenerator {
         private Random r = new Random();
         private int i = 0;
 
-        Sample getNext() {
+        Sample getNext(long time) {
+            ByteBuffer stamp = ByteBuffer.allocate(Long.BYTES).putLong(time);
+            stamp.flip();
             Sample s = Sample.newBuilder()
                     .setId(Integer.toString(r.nextInt()))
                     .setCounter(i++)
+                    .setTimestamp(stamp)
                     .build();
 
             return s;

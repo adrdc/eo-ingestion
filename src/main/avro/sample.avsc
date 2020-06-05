@@ -3,6 +3,7 @@
  "name": "Sample",
  "fields": [
      {"name": "id", "type": "string"},
-     {"name": "counter",  "type": "int"}
+     {"name": "counter",  "type": "int"},
+     {"name": "timestamp", "type": "bytes", "logicalType": "time-millis"}
  ]
 }

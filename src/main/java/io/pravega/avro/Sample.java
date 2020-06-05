@@ -5,17 +5,17 @@
  */
 package io.pravega.avro;
 
+import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
+import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
 import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
-@SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
-public class
-Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -1269839050321848973L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Sample\",\"namespace\":\"io.pravega.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"counter\",\"type\":\"int\"}]}");
+public class Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = -2963460628068825012L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"Sample\",\"namespace\":\"io.pravega.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"counter\",\"type\":\"int\"},{\"name\":\"timestamp\",\"type\":\"bytes\",\"logicalType\":\"time-millis\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -27,7 +27,16 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
       new BinaryMessageDecoder<Sample>(MODEL$, SCHEMA$);
 
   /**
+   * Return the BinaryMessageEncoder instance used by this class.
+   * @return the message encoder used by this class
+   */
+  public static BinaryMessageEncoder<Sample> getEncoder() {
+    return ENCODER;
+  }
+
+  /**
    * Return the BinaryMessageDecoder instance used by this class.
+   * @return the message decoder used by this class
    */
   public static BinaryMessageDecoder<Sample> getDecoder() {
     return DECODER;
@@ -36,17 +45,27 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
   /**
    * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
+   * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<Sample> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<Sample>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this Sample to a ByteBuffer. */
+  /**
+   * Serializes this Sample to a ByteBuffer.
+   * @return a buffer holding the serialized data for this instance
+   * @throws java.io.IOException if this instance could not be serialized
+   */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a Sample from a ByteBuffer. */
+  /**
+   * Deserializes a Sample from a ByteBuffer.
+   * @param b a byte buffer holding serialized data for an instance of this class
+   * @return a Sample instance decoded from the given buffer
+   * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
+   */
   public static Sample fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
@@ -54,6 +73,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
 
   @Deprecated public java.lang.CharSequence id;
   @Deprecated public int counter;
+  @Deprecated public java.nio.ByteBuffer timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -66,18 +86,22 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
    * All-args constructor.
    * @param id The new value for id
    * @param counter The new value for counter
+   * @param timestamp The new value for timestamp
    */
-  public Sample(java.lang.CharSequence id, java.lang.Integer counter) {
+  public Sample(java.lang.CharSequence id, java.lang.Integer counter, java.nio.ByteBuffer timestamp) {
     this.id = id;
     this.counter = counter;
+    this.timestamp = timestamp;
   }
 
+  public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
   // Used by DatumWriter.  Applications should not call.
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return id;
     case 1: return counter;
+    case 2: return timestamp;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -88,6 +112,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
     switch (field$) {
     case 0: id = (java.lang.CharSequence)value$; break;
     case 1: counter = (java.lang.Integer)value$; break;
+    case 2: timestamp = (java.nio.ByteBuffer)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -99,6 +124,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
   public java.lang.CharSequence getId() {
     return id;
   }
+
 
   /**
    * Sets the value of the 'id' field.
@@ -112,16 +138,34 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
    * Gets the value of the 'counter' field.
    * @return The value of the 'counter' field.
    */
-  public java.lang.Integer getCounter() {
+  public int getCounter() {
     return counter;
   }
+
 
   /**
    * Sets the value of the 'counter' field.
    * @param value the value to set.
    */
-  public void setCounter(java.lang.Integer value) {
+  public void setCounter(int value) {
     this.counter = value;
+  }
+
+  /**
+   * Gets the value of the 'timestamp' field.
+   * @return The value of the 'timestamp' field.
+   */
+  public java.nio.ByteBuffer getTimestamp() {
+    return timestamp;
+  }
+
+
+  /**
+   * Sets the value of the 'timestamp' field.
+   * @param value the value to set.
+   */
+  public void setTimestamp(java.nio.ByteBuffer value) {
+    this.timestamp = value;
   }
 
   /**
@@ -138,7 +182,11 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
    * @return A new Sample RecordBuilder
    */
   public static io.pravega.avro.Sample.Builder newBuilder(io.pravega.avro.Sample.Builder other) {
-    return new io.pravega.avro.Sample.Builder(other);
+    if (other == null) {
+      return new io.pravega.avro.Sample.Builder();
+    } else {
+      return new io.pravega.avro.Sample.Builder(other);
+    }
   }
 
   /**
@@ -147,7 +195,11 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
    * @return A new Sample RecordBuilder
    */
   public static io.pravega.avro.Sample.Builder newBuilder(io.pravega.avro.Sample other) {
-    return new io.pravega.avro.Sample.Builder(other);
+    if (other == null) {
+      return new io.pravega.avro.Sample.Builder();
+    } else {
+      return new io.pravega.avro.Sample.Builder(other);
+    }
   }
 
   /**
@@ -158,6 +210,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
 
     private java.lang.CharSequence id;
     private int counter;
+    private java.nio.ByteBuffer timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -172,11 +225,15 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
       super(other);
       if (isValidValue(fields()[0], other.id)) {
         this.id = data().deepCopy(fields()[0].schema(), other.id);
-        fieldSetFlags()[0] = true;
+        fieldSetFlags()[0] = other.fieldSetFlags()[0];
       }
       if (isValidValue(fields()[1], other.counter)) {
         this.counter = data().deepCopy(fields()[1].schema(), other.counter);
-        fieldSetFlags()[1] = true;
+        fieldSetFlags()[1] = other.fieldSetFlags()[1];
+      }
+      if (isValidValue(fields()[2], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+        fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
     }
 
@@ -185,7 +242,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
      * @param other The existing instance to copy.
      */
     private Builder(io.pravega.avro.Sample other) {
-            super(SCHEMA$);
+      super(SCHEMA$);
       if (isValidValue(fields()[0], other.id)) {
         this.id = data().deepCopy(fields()[0].schema(), other.id);
         fieldSetFlags()[0] = true;
@@ -193,6 +250,10 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
       if (isValidValue(fields()[1], other.counter)) {
         this.counter = data().deepCopy(fields()[1].schema(), other.counter);
         fieldSetFlags()[1] = true;
+      }
+      if (isValidValue(fields()[2], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+        fieldSetFlags()[2] = true;
       }
     }
 
@@ -203,6 +264,7 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
     public java.lang.CharSequence getId() {
       return id;
     }
+
 
     /**
       * Sets the value of the 'id' field.
@@ -239,9 +301,10 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
       * Gets the value of the 'counter' field.
       * @return The value.
       */
-    public java.lang.Integer getCounter() {
+    public int getCounter() {
       return counter;
     }
+
 
     /**
       * Sets the value of the 'counter' field.
@@ -273,6 +336,46 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
       return this;
     }
 
+    /**
+      * Gets the value of the 'timestamp' field.
+      * @return The value.
+      */
+    public java.nio.ByteBuffer getTimestamp() {
+      return timestamp;
+    }
+
+
+    /**
+      * Sets the value of the 'timestamp' field.
+      * @param value The value of 'timestamp'.
+      * @return This builder.
+      */
+    public io.pravega.avro.Sample.Builder setTimestamp(java.nio.ByteBuffer value) {
+      validate(fields()[2], value);
+      this.timestamp = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'timestamp' field has been set.
+      * @return True if the 'timestamp' field has been set, false otherwise.
+      */
+    public boolean hasTimestamp() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'timestamp' field.
+      * @return This builder.
+      */
+    public io.pravega.avro.Sample.Builder clearTimestamp() {
+      timestamp = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public Sample build() {
@@ -280,7 +383,10 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
         Sample record = new Sample();
         record.id = fieldSetFlags()[0] ? this.id : (java.lang.CharSequence) defaultValue(fields()[0]);
         record.counter = fieldSetFlags()[1] ? this.counter : (java.lang.Integer) defaultValue(fields()[1]);
+        record.timestamp = fieldSetFlags()[2] ? this.timestamp : (java.nio.ByteBuffer) defaultValue(fields()[2]);
         return record;
+      } catch (org.apache.avro.AvroMissingFieldException e) {
+        throw e;
       } catch (java.lang.Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);
       }
@@ -305,4 +411,59 @@ Sample extends org.apache.avro.specific.SpecificRecordBase implements org.apache
     READER$.read(this, SpecificData.getDecoder(in));
   }
 
+  @Override protected boolean hasCustomCoders() { return true; }
+
+  @Override public void customEncode(org.apache.avro.io.Encoder out)
+    throws java.io.IOException
+  {
+    out.writeString(this.id);
+
+    out.writeInt(this.counter);
+
+    out.writeBytes(this.timestamp);
+
+  }
+
+  @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
+    throws java.io.IOException
+  {
+    org.apache.avro.Schema.Field[] fieldOrder = in.readFieldOrderIfDiff();
+    if (fieldOrder == null) {
+      this.id = in.readString(this.id instanceof Utf8 ? (Utf8)this.id : null);
+
+      this.counter = in.readInt();
+
+      this.timestamp = in.readBytes(this.timestamp);
+
+    } else {
+      for (int i = 0; i < 3; i++) {
+        switch (fieldOrder[i].pos()) {
+        case 0:
+          this.id = in.readString(this.id instanceof Utf8 ? (Utf8)this.id : null);
+          break;
+
+        case 1:
+          this.counter = in.readInt();
+          break;
+
+        case 2:
+          this.timestamp = in.readBytes(this.timestamp);
+          break;
+
+        default:
+          throw new java.io.IOException("Corrupt ResolvingDecoder.");
+        }
+      }
+    }
+  }
 }
+
+
+
+
+
+
+
+
+
+

@@ -23,6 +23,7 @@ import io.pravega.client.EventStreamClientFactory;
 import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.admin.StreamManager;
 import io.pravega.client.stream.*;
+import io.pravega.client.stream.impl.ByteBufferSerializer;
 import lombok.Getter;
 import lombok.val;
 import org.apache.avro.file.DataFileReader;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -45,6 +47,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PravegaSynchronizedWriter implements AutoCloseable {
     static final Logger log = LoggerFactory.getLogger(PravegaSynchronizedWriter.class);
@@ -87,7 +90,7 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
 
                 // Create sync stream
                 StreamConfiguration syncStreamConfig = StreamConfiguration.builder()
-                        .scalingPolicy(ScalingPolicy.fixed(1))
+                        .scalingPolicy(ScalingPolicy.fixed(10))
                         .build();
                 streamManager.createStream(scope, syncstream, syncStreamConfig);
 
@@ -210,10 +213,10 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                         int fileId = Integer.parseInt(f.getName().split(".avro")[0]);
                         if( fileId >= this.startFileId && !skip.get()) {
                             try {
-                                System.out.println("File " + f.getName());
-                                System.out.println("\t Beginning transaction.");
-                                log.info("Beginning transaction for file {}", f.getName());
+                                log.info("File " + f.getName());
+                                log.info("\t Beginning transaction for file {}", f.getName());
                                 Transaction<Sample> txn = writer.beginTxn();
+                                final AtomicLong timeToCommit = new AtomicLong(Long.MIN_VALUE);
                                 // Add txn id and file name to state synchronizer
                                 //this.synchronizer.updateStatus(new Status(fileId, txn.getTxnId()));
                                 Status newStatus = Status.newBuilder()
@@ -225,13 +228,17 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                                 };
                                 this.currentStatus = newStatus;
 
-                                log.info("Added the following status: {}, {}", fileId, txn.getTxnId());
+                                log.debug("Added the following status: {}, {}", fileId, txn.getTxnId());
                                 try {
                                     DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
                                     DataFileReader<Sample> dataFileReader = new DataFileReader<>(f, userDatumReader);
                                     dataFileReader.forEach(sample -> {
                                         try {
                                             txn.writeEvent(sample.getId().toString(), sample);
+
+                                            long currentTime = timeToCommit.get();
+                                            long sampleTime = sample.getTimestamp().getLong() + 1L;
+                                            timeToCommit.set(((currentTime >= sampleTime) ? currentTime : sampleTime));
                                         } catch (TxnFailedException e) {
                                             throw new RuntimeException(e);
                                         }
@@ -242,9 +249,15 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
-                                System.out.println("\t Committing transaction.");
-                                log.info("Committing transaction for file {}", f.getName());
-                                txn.commit();
+                                log.info("\t Committing transaction for file {}", f.getName());
+                                txn.commit(timeToCommit.get());
+
+                                // Slow down for demo purposes
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
 
                                 // Set during tests to break the flow prematurely
                                 if (breakFlow(this.afterCommitFlag, txnCount, skip)) return;

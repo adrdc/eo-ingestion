@@ -30,7 +30,10 @@ public class AvroSampleSerializer implements Serializer<Sample> {
     @Override
     public ByteBuffer serialize(Sample sample) {
         try {
-            return sample.toByteBuffer();
+            ByteBuffer buffer = sample.toByteBuffer();
+            //System.out.println(sample.toString() + ", buffer size: " + buffer.capacity());
+
+            return buffer;
         } catch (IOException e) {
             log.error("Error while serializing Avro object", e);
             throw new RuntimeException(e);

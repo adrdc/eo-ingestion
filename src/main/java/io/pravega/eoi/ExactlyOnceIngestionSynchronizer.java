@@ -30,6 +30,25 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
+
+/**
+ * This class defines an updatable status to persist and maintain with the Pravega
+ * {@link StateSynchronizer}. The {@link io.pravega.eoi.Status} is an avro object and
+ * contains a file id and a txn id. The goal is to persist this status as a file
+ * writer makes progress with ingesting events from a sequence of files. The files
+ * are tobe ingested in order. In the case the writer restarts, it is able to resume
+ * from the most recent status.
+ *
+ * This class defines a few important classes:
+ *      - A status update called #StatusUpdate, and defines how the
+ *      - An initial state class called #StatusInit
+ *
+ * The state synchronizer enables coordination across processes, but in this example,
+ * we are illustrating its implementation using a single writer, which corresponds to
+ * a single shard being consumed by a single writer. The example can be expanded to
+ * assume multiple shards and associated writers.
+ *
+ */
 @RequiredArgsConstructor
 public class ExactlyOnceIngestionSynchronizer {
     static Logger log = LoggerFactory.getLogger(ExactlyOnceIngestionSynchronizer.class);
@@ -39,6 +58,9 @@ public class ExactlyOnceIngestionSynchronizer {
     private int sequence;
     private UUID txnId;
 
+    /**
+     * A private data class defining the revisioned state object that this synchronizer uses.
+     */
     @Data
     private static class UpdatableStatus implements Revisioned {
         private final String streamName;
@@ -68,12 +90,21 @@ public class ExactlyOnceIngestionSynchronizer {
 
         @Override
         public UpdatableStatus applyTo(UpdatableStatus oldState, Revision newRevision) {
-            log.trace("Applying update {} to {} ", this, oldState);
+            log.debug("Applying update {} to {} ", this, oldState);
+
+            /*
+             * The new revision is given by the state synchronizer, and it is expected
+             * to uniquely identify a revision of the state object for this stream. Under
+             * the hood, this is the offset of the segment holding the data.
+             */
             return new UpdatableStatus(oldState.streamName, newRevision, status);
         }
 
     }
 
+    /**
+     * Defines the initial status to be a file id of -1 and an arbitrary UUID.
+     */
     @ToString
     static class StatusInit implements InitialUpdate<UpdatableStatus>, Serializable {
         private final Status status = Status.newBuilder()
@@ -91,24 +122,61 @@ public class ExactlyOnceIngestionSynchronizer {
         }
     }
 
+
+    /**
+     * Private attribute holding a reference to the underlying state synchronizer
+     * that this class builds upon.
+     */
     private final StateSynchronizer<UpdatableStatus> stateSynchronizer;
 
+    /**
+     * Private constructor used by the static method
+     * {@link this#createNewSynchronizer(String, SynchronizerClientFactory)}
+     *
+     * @param streamName
+     * @param synchronizer
+     */
     private ExactlyOnceIngestionSynchronizer(String streamName,
                                              StateSynchronizer<UpdatableStatus> synchronizer) {
         this.stateSynchronizer = synchronizer;
         synchronizer.initialize(new StatusInit());
     }
 
+    /**
+     * Updates the state of this synchronizer by fetching the latest updates if any.
+     */
     public void update() {
         stateSynchronizer.fetchUpdates();
     }
 
+    /**
+     * Returns the current status object.
+     *
+     * @return
+     */
     public Status getStatus() { return stateSynchronizer.getState().status; }
 
+
+    /**
+     * Updates the status using the current expected one to spot concurrent access.
+     *
+     * @param newStatus
+     * @param currentStatus
+     * @return
+     */
     public boolean updateStatus(Status newStatus, Status currentStatus) {
         return stateSynchronizer.updateState((current, updates)-> {
+            /*
+             * Validates that the current status is the expected one, no
+             * concurrent updates.
+             */
+
             if (currentStatus.getFileId() == current.status.getFileId() &&
                     currentStatus.getTxnId().equals(current.status.getTxnId())) {
+                /*
+                 * updates contains the list of updates to be applied; in this case,
+                 * there is only one.
+                 */
                 updates.add(new StatusUpdate(newStatus));
 
                 return true;
@@ -119,7 +187,15 @@ public class ExactlyOnceIngestionSynchronizer {
         });
     }
 
-    public static <T extends Serializable> ExactlyOnceIngestionSynchronizer createNewSynchronizer(String streamName, SynchronizerClientFactory factory) {
+    /**
+     * Creates an instance of this status synchronizer.
+     *
+     * @param streamName Name of the stream to hold the data of this synchronizer
+     * @param factory A factory for clients of the status synchronizer
+     * @return A new instance of #ExactlyOnceIngestionSynchronizer
+     */
+
+    public static ExactlyOnceIngestionSynchronizer createNewSynchronizer(String streamName, SynchronizerClientFactory factory) {
         return new ExactlyOnceIngestionSynchronizer(streamName,
                 factory.createStateSynchronizer(streamName,
                         new StatusUpdateSerializer(),
