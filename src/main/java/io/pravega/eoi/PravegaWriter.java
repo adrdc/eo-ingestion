@@ -41,6 +41,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+
+/**
+ * This writer iterates over a set of files and writes the events in the files
+ * to a Pravega stream. In the case of a restart, it makes no attempt to determine
+ * where it stopped, and processes all files again.
+ */
+
 public class PravegaWriter {
     static final Logger log = LoggerFactory.getLogger(PravegaWriter.class);
     private Path path;
@@ -57,6 +64,9 @@ public class PravegaWriter {
 
     public void run() {
 
+        /*
+         * Creates stream to append file events to.
+         */
         StreamManager streamManager = StreamManager.create(controller);
         streamManager.createScope(scope);
 
@@ -69,6 +79,10 @@ public class PravegaWriter {
                 .controllerURI(controller)
                 .build();
 
+        /*
+         * Creates an event writer and iterates over the existing files
+         * append the file events to the Pravega stream.
+         */
         try (EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(scope, clientConfig);
              EventStreamWriter<Sample> writer = clientFactory.
              createEventWriter(stream,
@@ -86,6 +100,9 @@ public class PravegaWriter {
             }).forEach(
                     f -> {
 
+                        /*
+                         * Writes each avro object in a file to the Pravega stream
+                         */
                         try {
                             DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
                             DataFileReader<Sample> dataFileReader = new DataFileReader<>(f, userDatumReader);
@@ -100,6 +117,17 @@ public class PravegaWriter {
     }
 
 
+
+    /**
+     * The main method to trigger the writer. Two command line options
+     * are necessary to start it:
+     *
+     * 1- The directory containing the files
+     * 2- The URI of the controller
+     *
+     * The files can be generated with the FileSampleGenerator in this project.
+     * The sample generator produces a number of avro files.
+     * */
 
     public static void main (String[] args) {
         URI controller = URI.create("");

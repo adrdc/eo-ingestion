@@ -43,6 +43,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+
+/**
+ * This writer, different from the PravegaWriter, uses transactions to append
+ * to a stream. Only after ingesting all events of a file to a transaction,
+ * it commits the transaction.
+ *
+ * Transactions can be more fine-grained and contain a partial set of events
+ * of a file to reduce the amount of redundant work upon restart, but this is
+ * not implemented in this sample.
+ *
+ * This sample also does not have any logic to determine what happened to the
+ * last transaction, which leads to open transactions to aborting. It also does
+ * not persist where it stopped, so the sample lacks functionality that is
+ * implemented in {@link PravegaSynchronizedWriter}.
+ */
 public class PravegaTxnWriter {
     static final Logger log = LoggerFactory.getLogger(PravegaTxnWriter.class);
     private Path path;
@@ -59,6 +74,9 @@ public class PravegaTxnWriter {
 
     public void run() {
 
+        /*
+         * Creates stream to append file events to.
+         */
         StreamManager streamManager = StreamManager.create(controller);
         streamManager.createScope(scope);
 
@@ -71,6 +89,10 @@ public class PravegaTxnWriter {
                 .controllerURI(controller)
                 .build();
 
+        /*
+         * Creates an event writer and iterates over the existing files
+         * append the file events to the Pravega stream.
+         */
         try (EventStreamClientFactory clientFactory = EventStreamClientFactory.withScope(scope, clientConfig);
              TransactionalEventStreamWriter<Sample> writer = clientFactory.
                      createTransactionalEventWriter(stream,
@@ -88,8 +110,10 @@ public class PravegaTxnWriter {
             }).forEach(
                     f -> {
                         try {
+                            /*
+                             * Begins a transaction for each file
+                             */
                             Transaction<Sample> txn = writer.beginTxn();
-                            // Add txn id and file name to state synchronizer
                             try {
 
                                 DatumReader<Sample> userDatumReader = new SpecificDatumReader<>(Sample.class);
@@ -104,6 +128,10 @@ public class PravegaTxnWriter {
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
+
+                            /*
+                             * Commits the transaction
+                             */
                             txn.commit();
                         } catch (TxnFailedException e) {
                             throw new RuntimeException(e);
@@ -113,6 +141,16 @@ public class PravegaTxnWriter {
         }
     }
 
+    /**
+     * The main method to trigger the writer. Two command line options
+     * are necessary to start it:
+     *
+     * 1- The directory containing the files
+     * 2- The URI of the controller
+     *
+     * The files can be generated with the FileSampleGenerator in this project.
+     * The sample generator produces a number of avro files.
+     * */
     public static void main (String[] args) {
         URI controller = URI.create("");
         Path path = Paths.get("");
