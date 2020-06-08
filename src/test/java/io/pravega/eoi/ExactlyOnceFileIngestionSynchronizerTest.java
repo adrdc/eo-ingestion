@@ -22,6 +22,7 @@ import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.admin.StreamManager;
 import io.pravega.client.stream.ScalingPolicy;
 import io.pravega.client.stream.StreamConfiguration;
+import io.pravega.eoi.synchronizer.ExactlyOnceFileIngestionSynchronizer;
 import io.pravega.utils.SetupUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -33,9 +34,9 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ExactlyOnceIngestionSynchronizerTest {
+public class ExactlyOnceFileIngestionSynchronizerTest {
 
-    static final Logger log = LoggerFactory.getLogger(ExactlyOnceIngestionSynchronizerTest.class);
+    static final Logger log = LoggerFactory.getLogger(ExactlyOnceFileIngestionSynchronizerTest.class);
 
     protected static final AtomicReference<SetupUtils> SETUP_UTILS = new AtomicReference();
 
@@ -71,8 +72,8 @@ public class ExactlyOnceIngestionSynchronizerTest {
 
             // Create state synchronizer
             SynchronizerClientFactory syncFactory = SynchronizerClientFactory.withScope(scope, clientConfig);
-            ExactlyOnceIngestionSynchronizer synchronizer1 = ExactlyOnceIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
-            ExactlyOnceIngestionSynchronizer synchronizer2 = ExactlyOnceIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
+            ExactlyOnceFileIngestionSynchronizer synchronizer1 = ExactlyOnceFileIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
+            ExactlyOnceFileIngestionSynchronizer synchronizer2 = ExactlyOnceFileIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
 
             Status status = synchronizer1.getStatus();
             Status newStatus = Status.newBuilder()

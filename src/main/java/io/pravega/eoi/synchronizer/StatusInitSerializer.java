@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-package io.pravega.eoi;
+package io.pravega.eoi.synchronizer;
 
 import io.pravega.client.stream.Serializer;
+import io.pravega.eoi.synchronizer.ExactlyOnceFileIngestionSynchronizer.StatusInit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 
 
-public class StatusInitSerializer implements Serializer<ExactlyOnceIngestionSynchronizer.StatusInit> {
-    static final Logger log = LoggerFactory.getLogger(io.pravega.eoi.StatusUpdateSerializer.class);
+public class StatusInitSerializer implements Serializer<StatusInit> {
+    static final Logger log = LoggerFactory.getLogger(StatusInitSerializer.class);
 
     @Override
-    public ByteBuffer serialize(ExactlyOnceIngestionSynchronizer.StatusInit statusUpdate) {
+    public ByteBuffer serialize(StatusInit statusUpdate) {
         return ByteBuffer.allocate(0);
     }
 
     @Override
-    public ExactlyOnceIngestionSynchronizer.StatusInit deserialize(ByteBuffer byteBuffer) {
-            return new ExactlyOnceIngestionSynchronizer.StatusInit();
+    public StatusInit deserialize(ByteBuffer byteBuffer) {
+            return new StatusInit();
     }
 }
 

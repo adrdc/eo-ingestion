@@ -1,0 +1,9 @@
+{"namespace": "io.pravega.avro",
+ "type": "record",
+ "name": "StreamPosition",
+ "fields": [
+     {"name": "cycle", "type": "int"},
+     {"name": "checkpoint", "type": "bytes"},
+     {"name": "txnId", "type": "string"}
+ ]
+}

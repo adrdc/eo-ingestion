@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.pravega.eoi;
+package io.pravega.eoi.synchronizer;
 
 import io.pravega.avro.Status;
 import io.pravega.client.SynchronizerClientFactory;
@@ -50,8 +50,8 @@ import java.util.UUID;
  *
  */
 @RequiredArgsConstructor
-public class ExactlyOnceIngestionSynchronizer {
-    static Logger log = LoggerFactory.getLogger(ExactlyOnceIngestionSynchronizer.class);
+public class ExactlyOnceFileIngestionSynchronizer {
+    static Logger log = LoggerFactory.getLogger(ExactlyOnceFileIngestionSynchronizer.class);
 
     private String scopedName;
     private Revision revision;
@@ -136,8 +136,8 @@ public class ExactlyOnceIngestionSynchronizer {
      * @param streamName
      * @param synchronizer
      */
-    private ExactlyOnceIngestionSynchronizer(String streamName,
-                                             StateSynchronizer<UpdatableStatus> synchronizer) {
+    private ExactlyOnceFileIngestionSynchronizer(String streamName,
+                                                 StateSynchronizer<UpdatableStatus> synchronizer) {
         this.stateSynchronizer = synchronizer;
         synchronizer.initialize(new StatusInit());
     }
@@ -192,11 +192,11 @@ public class ExactlyOnceIngestionSynchronizer {
      *
      * @param streamName Name of the stream to hold the data of this synchronizer
      * @param factory A factory for clients of the status synchronizer
-     * @return A new instance of #ExactlyOnceIngestionSynchronizer
+     * @return A new instance of #ExactlyOnceFileIngestionSynchronizer
      */
 
-    public static ExactlyOnceIngestionSynchronizer createNewSynchronizer(String streamName, SynchronizerClientFactory factory) {
-        return new ExactlyOnceIngestionSynchronizer(streamName,
+    public static ExactlyOnceFileIngestionSynchronizer createNewSynchronizer(String streamName, SynchronizerClientFactory factory) {
+        return new ExactlyOnceFileIngestionSynchronizer(streamName,
                 factory.createStateSynchronizer(streamName,
                         new StatusUpdateSerializer(),
                         new StatusInitSerializer(),

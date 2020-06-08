@@ -23,9 +23,8 @@ import io.pravega.client.EventStreamClientFactory;
 import io.pravega.client.SynchronizerClientFactory;
 import io.pravega.client.admin.StreamManager;
 import io.pravega.client.stream.*;
-import io.pravega.client.stream.impl.ByteBufferSerializer;
+import io.pravega.eoi.synchronizer.ExactlyOnceFileIngestionSynchronizer;
 import lombok.Getter;
-import lombok.val;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -39,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -62,7 +60,7 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
     private final URI controller;
     private int startFileId;
     private SynchronizerClientFactory syncFactory;
-    private ExactlyOnceIngestionSynchronizer synchronizer;
+    private ExactlyOnceFileIngestionSynchronizer synchronizer;
     private AtomicBoolean initialized = new AtomicBoolean(false);
     private AtomicInteger txnToFail = new AtomicInteger(0);
     private Status currentStatus;
@@ -96,7 +94,7 @@ public class PravegaSynchronizedWriter implements AutoCloseable {
 
                 // Create state synchronizer
                 this.syncFactory = SynchronizerClientFactory.withScope(scope, clientConfig);
-                this.synchronizer = ExactlyOnceIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
+                this.synchronizer = ExactlyOnceFileIngestionSynchronizer.createNewSynchronizer(syncstream, syncFactory);
 
                 // Create data stream
                 StreamConfiguration dataStreamConfig = StreamConfiguration.builder()

@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package io.pravega.eoi;
+package io.pravega.eoi.synchronizer;
 
 import io.pravega.avro.Status;
 import io.pravega.client.stream.Serializer;
+import io.pravega.eoi.synchronizer.ExactlyOnceFileIngestionSynchronizer.StatusUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class StatusUpdateSerializer implements Serializer<ExactlyOnceIngestionSynchronizer.StatusUpdate>{
+public class StatusUpdateSerializer implements Serializer<StatusUpdate>{
     static final Logger log = LoggerFactory.getLogger(StatusUpdateSerializer.class);
 
     @Override
-    public ByteBuffer serialize(ExactlyOnceIngestionSynchronizer.StatusUpdate statusUpdate) {
+    public ByteBuffer serialize(StatusUpdate statusUpdate) {
         try {
             return statusUpdate.getStatusBytes();
         } catch (IOException e) {
@@ -38,9 +39,9 @@ public class StatusUpdateSerializer implements Serializer<ExactlyOnceIngestionSy
     }
 
     @Override
-    public ExactlyOnceIngestionSynchronizer.StatusUpdate deserialize(ByteBuffer byteBuffer) {
+    public StatusUpdate deserialize(ByteBuffer byteBuffer) {
         try {
-            return new ExactlyOnceIngestionSynchronizer.StatusUpdate(Status.fromByteBuffer(byteBuffer));
+            return new StatusUpdate(Status.fromByteBuffer(byteBuffer));
         } catch (IOException e) {
             log.error("Error while deserializing Avro object", e);
             throw new RuntimeException(e);
