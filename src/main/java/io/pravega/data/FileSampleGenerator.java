@@ -145,6 +145,5 @@ public class FileSampleGenerator {
         }
 
         FileGenerator.generate(dir, numOfFiles, numOfRecords);
-
     }
 }
